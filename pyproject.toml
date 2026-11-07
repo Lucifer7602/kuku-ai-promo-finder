@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "microdrama-promo-finder"
+version = "0.1.0"
+description = "Rules-based screening tool for 20-60 second microdrama promo candidates"
+requires-python = ">=3.10"
+
+[tool.setuptools]
+packages = ["promofinder"]
