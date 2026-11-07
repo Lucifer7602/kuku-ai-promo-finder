@@ -1,0 +1,31 @@
+EPISODE NUMBER: Episode 1
+EPISODE LOGLINE: A fictional courier discovers a sealed letter that could expose a family secret.
+CONTINUITY NOTES: Synthetic demo data. No Kuku source content.
+--- SCRIPT START ---
+SCENE 01
+Scene start: 00:00.00
+Scene end: 00:45.00
+**CAMERA:**
+Start: (00:00.00) | End: (00:03.00)
+A heavy door bursts open as a masked courier enters.
+
+**ACTION:**
+Start: (00:00.00) | End: (00:03.00)
+The courier drops a sealed letter onto the table and points at the family crest.
+
+**HEROINE (Shocked):**
+Start: (00:00.50) | End: (00:03.00)
+"Who sent you?"
+
+**HERO (Urgent):**
+Start: (00:18.00) | End: (00:21.00)
+"That seal belongs to the missing heir."
+
+**VILLAIN (Cold):**
+Start: (00:39.00) | End: (00:42.00)
+"The Duke betrayed Juliana, killed her father, and will destroy us all if the letter reaches the King."
+
+**CAMERA:**
+Start: (00:42.00) | End: (00:45.00)
+The candle goes out; the room falls into darkness before a cut to black.
+--- SCRIPT END ---
