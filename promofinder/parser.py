@@ -11,7 +11,7 @@ EP_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 BLOCK_RE = re.compile(
-    r"\*\*(?P<role>[^*]+)\*\*: ?\s*\n"
+    r"\*\*(?P<role>[^*]+)\*\*:?\s*\n"
     r"Start:\s*\((?P<start>\d{2}:\d{2}(?:\.\d+)?)\)\s*\|\s*"
     r"End:\s*\((?P<end>\d{2}:\d{2}(?:\.\d+)?)\)\s*\n"
     r"(?P<body>.*?)(?=\n\n\*\*|\nSCENE\s*\d+|\n--- SCRIPT END ---|\Z)",
