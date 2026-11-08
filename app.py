@@ -18,13 +18,17 @@ if APP_DIR_STR in sys.path:
     sys.path.remove(APP_DIR_STR)
 sys.path.insert(0, APP_DIR_STR)
 
+import promofinder.parser as parser_module
 import promofinder.scorer as scorer_module
 from promofinder.parser import parse_screenplay
 from promofinder.scorer import find_candidates
 
 EXPECTED_SCORER = (APP_DIR / "promofinder" / "scorer.py").resolve()
 LOADED_SCORER = Path(scorer_module.__file__).resolve()
+EXPECTED_PARSER = (APP_DIR / "promofinder" / "parser.py").resolve()
+LOADED_PARSER = Path(parser_module.__file__).resolve()
 SCORER_MATCHES_PROJECT = LOADED_SCORER == EXPECTED_SCORER
+PARSER_MATCHES_PROJECT = LOADED_PARSER == EXPECTED_PARSER
 
 st.set_page_config(page_title="Microdrama Promo Finder", page_icon="🎬", layout="wide")
 st.title("Microdrama Promo Finder")
@@ -43,8 +47,40 @@ with st.sidebar:
     per_episode = st.slider("Maximum candidates per episode", min_value=1, max_value=10, value=5)
     st.caption("Candidates are screenplay-based suggestions, not finished video edits.")
 
-uploaded = st.file_uploader("Upload a UTF-8 screenplay text file (.txt)", type=["txt"])
+# Use a versioned widget key so older Streamlit upload state cannot be reused.
+uploaded = st.file_uploader(
+    "Upload a UTF-8 screenplay text file (.txt)",
+    type=["txt"],
+    key="screenplay_upload_v2",
+)
 manual_text = st.text_area("Or paste screenplay text", height=180, placeholder="Paste timestamped screenplay text here...")
+
+# Parse and fingerprint the exact bytes currently selected in the uploader.
+# This preview is intentionally visible before the user clicks Analyze.
+selected_text = None
+selected_name = None
+selected_type = None
+if uploaded is not None:
+    selected_text = uploaded.getvalue().decode("utf-8-sig", errors="replace")
+    selected_name = uploaded.name
+    selected_type = "uploaded file"
+elif manual_text.strip():
+    selected_text = manual_text
+    selected_name = "pasted_text.txt"
+    selected_type = "pasted text"
+
+preview_episodes = parse_screenplay(selected_text) if selected_text is not None else []
+if selected_text is not None:
+    preview_hash = hashlib.sha256(selected_text.encode("utf-8")).hexdigest()
+    preview_blocks = sum(len(e.events) for e in preview_episodes)
+    with st.expander("Selected input verification — confirm this file before analysis", expanded=True):
+        st.write(f"**Selected input:** {selected_name} ({selected_type})")
+        st.write(f"**Input characters:** {len(selected_text)}")
+        st.write(f"**Input SHA-256:** `{preview_hash}`")
+        st.write(f"**Episodes recognised:** {len(preview_episodes)}")
+        st.write(f"**Timestamped blocks parsed:** {preview_blocks}")
+        st.write(f"**Parser file loaded:** `{LOADED_PARSER}`")
+        st.write(f"**Parser loaded from this project:** {'YES' if PARSER_MATCHES_PROJECT else 'NO'}")
 
 col1, col2 = st.columns([1, 1])
 with col1:
@@ -61,16 +97,11 @@ if clear_clicked:
     st.rerun()
 
 if analyze_clicked:
-    if uploaded is not None:
-        source_text = uploaded.getvalue().decode("utf-8-sig", errors="replace")
-        source_name = uploaded.name
-        source_type = "uploaded file"
-    else:
-        source_text = manual_text
-        source_name = "pasted_text.txt"
-        source_type = "pasted text"
+    source_text = selected_text or ""
+    source_name = selected_name or "pasted_text.txt"
+    source_type = selected_type or "pasted text"
 
-    episodes = parse_screenplay(source_text)
+    episodes = preview_episodes
     candidates = find_candidates(episodes, per_episode=per_episode)
     candidate_counts = Counter(c.episode for c in candidates)
     parsed_numbers = [e.number for e in episodes]
@@ -97,6 +128,9 @@ if analyze_clicked:
         "candidate_counts": episode_counts,
         "per_episode_limit": per_episode,
         "app_file": str(Path(__file__).resolve()),
+        "parser_file": str(LOADED_PARSER),
+        "expected_parser_file": str(EXPECTED_PARSER),
+        "parser_matches_project": PARSER_MATCHES_PROJECT,
         "scorer_file": str(LOADED_SCORER),
         "expected_scorer_file": str(EXPECTED_SCORER),
         "scorer_matches_project": SCORER_MATCHES_PROJECT,
