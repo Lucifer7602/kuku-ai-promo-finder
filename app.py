@@ -1,11 +1,30 @@
 from __future__ import annotations
 
+import hashlib
 import json
-import streamlit as st
-import pandas as pd
+import sys
+from collections import Counter
+from pathlib import Path
 
+import pandas as pd
+import streamlit as st
+
+# Always load this checkout's package, not another installed package with the
+# same name. This is especially useful when Streamlit is launched from a
+# different working directory on Windows.
+APP_DIR = Path(__file__).resolve().parent
+APP_DIR_STR = str(APP_DIR)
+if APP_DIR_STR in sys.path:
+    sys.path.remove(APP_DIR_STR)
+sys.path.insert(0, APP_DIR_STR)
+
+import promofinder.scorer as scorer_module
 from promofinder.parser import parse_screenplay
 from promofinder.scorer import find_candidates
+
+EXPECTED_SCORER = (APP_DIR / "promofinder" / "scorer.py").resolve()
+LOADED_SCORER = Path(scorer_module.__file__).resolve()
+SCORER_MATCHES_PROJECT = LOADED_SCORER == EXPECTED_SCORER
 
 st.set_page_config(page_title="Microdrama Promo Finder", page_icon="🎬", layout="wide")
 st.title("Microdrama Promo Finder")
@@ -19,25 +38,65 @@ with st.sidebar:
 uploaded = st.file_uploader("Upload a UTF-8 screenplay text file (.txt)", type=["txt"])
 manual_text = st.text_area("Or paste screenplay text", height=180, placeholder="Paste timestamped screenplay text here...")
 
-if st.button("Find promo candidates", type="primary", disabled=(uploaded is None and not manual_text.strip())):
+col1, col2 = st.columns([1, 1])
+with col1:
+    analyze_clicked = st.button(
+        "Find promo candidates",
+        type="primary",
+        disabled=(uploaded is None and not manual_text.strip()),
+    )
+with col2:
+    clear_clicked = st.button("Clear previous results")
+
+if clear_clicked:
+    st.session_state.pop("run", None)
+    st.rerun()
+
+if analyze_clicked:
     if uploaded is not None:
-        source_text = uploaded.getvalue().decode("utf-8", errors="replace")
+        source_text = uploaded.getvalue().decode("utf-8-sig", errors="replace")
         source_name = uploaded.name
+        source_type = "uploaded file"
     else:
         source_text = manual_text
         source_name = "pasted_text.txt"
+        source_type = "pasted text"
 
     episodes = parse_screenplay(source_text)
     candidates = find_candidates(episodes, per_episode=per_episode)
+    candidate_counts = Counter(c.episode for c in candidates)
+    episode_counts = [
+        {"Episode": f"{e.number:02d}", "Timestamped blocks": len(e.events),
+         "Selected candidates": candidate_counts.get(e.number, 0)}
+        for e in episodes
+    ]
+
     st.session_state["run"] = {
         "source_name": source_name,
+        "source_type": source_type,
+        "source_sha256": hashlib.sha256(source_text.encode("utf-8")).hexdigest(),
+        "source_characters": len(source_text),
         "episodes": [e.as_dict() for e in episodes],
         "candidates": [c.as_dict() for c in candidates],
+        "candidate_counts": episode_counts,
+        "per_episode_limit": per_episode,
+        "app_file": str(Path(__file__).resolve()),
+        "scorer_file": str(LOADED_SCORER),
+        "expected_scorer_file": str(EXPECTED_SCORER),
+        "scorer_matches_project": SCORER_MATCHES_PROJECT,
+        "timestamped_blocks": sum(len(e.events) for e in episodes),
     }
 
 run = st.session_state.get("run")
 if run:
     st.success(f"Parsed {len(run['episodes'])} episodes; found {len(run['candidates'])} candidate windows.")
+
+    if not run["scorer_matches_project"]:
+        st.error(
+            "Runtime mismatch: the app imported a scorer outside this project folder. "
+            "Use the scorer path shown in Run diagnostics to identify the wrong copy."
+        )
+
     rows = []
     for c in run["candidates"]:
         rows.append({
@@ -50,8 +109,28 @@ if run:
         st.dataframe(df, use_container_width=True, hide_index=True)
     else:
         st.warning("No candidates passed the first-pass threshold. Review the source format and try again.")
-    st.download_button("Download JSON", json.dumps(run, indent=2), file_name="promo_candidates.json", mime="application/json")
-    st.download_button("Download CSV", df.to_csv(index=False), file_name="promo_candidates.csv", mime="text/csv")
+
+    with st.expander("Run diagnostics — use this to verify the 50-episode run"):
+        st.write(f"**Input:** {run['source_name']} ({run['source_type']})")
+        st.write(f"**Episodes parsed:** {len(run['episodes'])}")
+        st.write(f"**Timestamped blocks parsed:** {run['timestamped_blocks']}")
+        st.write(f"**Maximum candidates per episode selected:** {run['per_episode_limit']}")
+        st.write(f"**Total candidates returned:** {len(run['candidates'])}")
+        st.write(f"**Scorer file loaded:** `{run['scorer_file']}`")
+        st.write(f"**Expected scorer file:** `{run['expected_scorer_file']}`")
+        st.write(f"**Scorer loaded from this project:** {'YES' if run['scorer_matches_project'] else 'NO'}")
+        st.write(f"**Input SHA-256:** `{run['source_sha256']}`")
+        st.write(f"**Input character count:** {run['source_characters']}")
+        st.dataframe(pd.DataFrame(run["candidate_counts"]), use_container_width=True, hide_index=True)
+
+    st.download_button(
+        "Download JSON", json.dumps(run, indent=2),
+        file_name="promo_candidates.json", mime="application/json",
+    )
+    st.download_button(
+        "Download CSV", df.to_csv(index=False),
+        file_name="promo_candidates.csv", mime="text/csv",
+    )
 
 with st.expander("How to read the score"):
     st.markdown("""
