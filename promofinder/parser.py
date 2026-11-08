@@ -3,9 +3,9 @@ from __future__ import annotations
 import re
 from dataclasses import asdict, dataclass
 
-TIME_RE = re.compile(r"^(?P<minutes>\d{2}):(?P<seconds>\d{2})(?:\.(?P<centis>\d{1,2}))?$")
+TIME_RE = re.compile(r"^(?P<minutes>\d{2}):(?P<seconds>\d{2})(?:\.(?P<centis>\d+))?$")
 EP_RE = re.compile(
-    r"EPISODE NUMBER:\s*Episode\s*(?P<number>\d+)\s*\n"
+    r"EPISODE NUMBER:\s*(?:Episode\s*)?(?P<number>\d+)\s*\n"
     r"EPISODE LOGLINE:\s*(?P<logline>.*?)\n"
     r"CONTINUITY NOTES:\s*(?P<continuity>.*?)\n",
     re.IGNORECASE | re.DOTALL,
