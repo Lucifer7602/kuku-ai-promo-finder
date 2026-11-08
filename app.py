@@ -30,6 +30,14 @@ st.set_page_config(page_title="Microdrama Promo Finder", page_icon="🎬", layou
 st.title("Microdrama Promo Finder")
 st.caption("A free, local-first screenplay screening tool. It suggests candidates; an editor makes the final call.")
 
+# Show runtime identity immediately, even before a screenplay is uploaded.
+# This lets users confirm the correct checkout is running before analysis.
+with st.expander("Runtime diagnostics — verify the project currently running", expanded=True):
+    st.write(f"**App file running:** `{Path(__file__).resolve()}`")
+    st.write(f"**Scorer file loaded:** `{LOADED_SCORER}`")
+    st.write(f"**Expected scorer file:** `{EXPECTED_SCORER}`")
+    st.write(f"**Scorer loaded from this project:** {'YES' if SCORER_MATCHES_PROJECT else 'NO'}")
+
 with st.sidebar:
     st.header("Run settings")
     per_episode = st.slider("Maximum candidates per episode", min_value=1, max_value=10, value=5)
