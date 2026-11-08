@@ -65,6 +65,14 @@ if analyze_clicked:
     episodes = parse_screenplay(source_text)
     candidates = find_candidates(episodes, per_episode=per_episode)
     candidate_counts = Counter(c.episode for c in candidates)
+    parsed_numbers = [e.number for e in episodes]
+    number_counts = Counter(parsed_numbers)
+    missing_episode_numbers = (
+        [n for n in range(min(parsed_numbers), max(parsed_numbers) + 1) if n not in number_counts]
+        if parsed_numbers else []
+    )
+    duplicate_episode_numbers = sorted(n for n, count in number_counts.items() if count > 1)
+    episodes_without_events = [e.number for e in episodes if not e.events]
     episode_counts = [
         {"Episode": f"{e.number:02d}", "Timestamped blocks": len(e.events),
          "Selected candidates": candidate_counts.get(e.number, 0)}
@@ -85,11 +93,23 @@ if analyze_clicked:
         "expected_scorer_file": str(EXPECTED_SCORER),
         "scorer_matches_project": SCORER_MATCHES_PROJECT,
         "timestamped_blocks": sum(len(e.events) for e in episodes),
+        "missing_episode_numbers": missing_episode_numbers,
+        "duplicate_episode_numbers": duplicate_episode_numbers,
+        "episodes_without_events": episodes_without_events,
     }
 
 run = st.session_state.get("run")
 if run:
-    st.success(f"Parsed {len(run['episodes'])} episodes; found {len(run['candidates'])} candidate windows.")
+    if not run["episodes"]:
+        st.error("No episodes were recognised. Check that the file contains episode headers in the documented format, then review the README example.")
+    else:
+        st.success(f"Parsed {len(run['episodes'])} episodes; found {len(run['candidates'])} candidate windows.")
+    if run["missing_episode_numbers"]:
+        st.warning(f"Possible missing episode numbers between the first and last parsed episode: {run['missing_episode_numbers']}")
+    if run["duplicate_episode_numbers"]:
+        st.warning(f"Duplicate episode numbers detected: {run['duplicate_episode_numbers']}")
+    if run["episodes_without_events"]:
+        st.warning(f"These episodes have headers but no timestamped blocks were parsed: {run['episodes_without_events']}")
 
     if not run["scorer_matches_project"]:
         st.error(
@@ -114,6 +134,9 @@ if run:
         st.write(f"**Input:** {run['source_name']} ({run['source_type']})")
         st.write(f"**Episodes parsed:** {len(run['episodes'])}")
         st.write(f"**Timestamped blocks parsed:** {run['timestamped_blocks']}")
+        st.write(f"**Missing episode numbers in parsed range:** {run['missing_episode_numbers']}")
+        st.write(f"**Duplicate episode numbers:** {run['duplicate_episode_numbers']}")
+        st.write(f"**Episodes with zero parsed blocks:** {run['episodes_without_events']}")
         st.write(f"**Maximum candidates per episode selected:** {run['per_episode_limit']}")
         st.write(f"**Total candidates returned:** {len(run['candidates'])}")
         st.write(f"**App file running:** `{run['app_file']}`")
