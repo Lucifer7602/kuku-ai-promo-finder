@@ -54,5 +54,21 @@ class ParserTests(unittest.TestCase):
         self.assertIsNone(score_window(episode, 0.0, 19.0))
 
 
+    def test_episode_header_without_word_episode(self):
+        text = SAMPLE.replace("EPISODE NUMBER: Episode 1", "EPISODE NUMBER: 1")
+        episodes = parse_screenplay(text)
+        self.assertEqual(len(episodes), 1)
+        self.assertEqual(episodes[0].number, 1)
+
+    def test_timestamp_with_three_decimal_places(self):
+        self.assertAlmostEqual(to_seconds("00:01.125"), 1.125)
+
+    def test_multiple_episodes_are_kept_in_source_order(self):
+        second = SAMPLE.replace("Episode 1", "Episode 2").replace("fictional bride", "fictional witness")
+        episodes = parse_screenplay(SAMPLE + "\\n" + second)
+        self.assertEqual([episode.number for episode in episodes], [1, 2])
+        self.assertTrue(all(episode.events for episode in episodes))
+
+
 if __name__ == "__main__":
     unittest.main()
