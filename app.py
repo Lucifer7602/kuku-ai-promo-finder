@@ -116,6 +116,7 @@ if run:
         st.write(f"**Timestamped blocks parsed:** {run['timestamped_blocks']}")
         st.write(f"**Maximum candidates per episode selected:** {run['per_episode_limit']}")
         st.write(f"**Total candidates returned:** {len(run['candidates'])}")
+        st.write(f"**App file running:** `{run['app_file']}`")
         st.write(f"**Scorer file loaded:** `{run['scorer_file']}`")
         st.write(f"**Expected scorer file:** `{run['expected_scorer_file']}`")
         st.write(f"**Scorer loaded from this project:** {'YES' if run['scorer_matches_project'] else 'NO'}")
